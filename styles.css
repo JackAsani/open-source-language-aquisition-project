@@ -1,0 +1,42 @@
+#parrot-mirror-ui {
+    background: #181818;
+    color: white;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 8px;
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+  }
+  
+  .pm-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0;
+  }
+  
+  .pm-row input {
+    width: 120px;
+    background: #222;
+    color: white;
+    border: 1px solid #444;
+    padding: 4px;
+  }
+  
+  .pm-row button {
+    background: #333;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+  }
+  
+  .pm-row button:hover {
+    background: #555;
+  }
+  
+  .pm-help {
+    margin-top: 8px;
+    font-size: 11px;
+    opacity: 0.7;
+  }

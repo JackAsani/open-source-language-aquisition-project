@@ -1,0 +1,15 @@
+{
+    "manifest_version": 3,
+    "name": "Parrot Mirror",
+    "version": "1.1",
+    "description": "YouTube-native A-B looping and speed control tool.",
+    "permissions": [],
+    "host_permissions": ["https://www.youtube.com/*"],
+    "content_scripts": [
+      {
+        "matches": ["https://www.youtube.com/*"],
+        "js": ["content.js"],
+        "css": ["styles.css"]
+      }
+    ]
+  }
