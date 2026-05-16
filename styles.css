@@ -1,42 +1,362 @@
+/* styles.css */
+
 #parrot-mirror-ui {
-    background: #181818;
-    color: white;
-    padding: 10px;
-    margin-top: 10px;
-    border-radius: 8px;
-    font-family: Arial, sans-serif;
-    font-size: 13px;
-  }
-  
-  .pm-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 6px 0;
-  }
-  
-  .pm-row input {
-    width: 120px;
-    background: #222;
-    color: white;
-    border: 1px solid #444;
-    padding: 4px;
-  }
-  
-  .pm-row button {
-    background: #333;
-    color: white;
-    border: none;
-    padding: 4px 8px;
-    cursor: pointer;
-  }
-  
-  .pm-row button:hover {
-    background: #555;
-  }
-  
-  .pm-help {
-    margin-top: 8px;
-    font-size: 11px;
-    opacity: 0.7;
-  }
+  background: rgba(18, 18, 18, 0.92);
+
+  backdrop-filter: blur(18px);
+
+  color: white;
+
+  margin-top: 12px;
+
+  padding: 18px;
+
+  border-radius: 18px;
+
+  border: 1px solid rgba(255,255,255,0.08);
+
+  font-family: Inter, Arial, sans-serif;
+
+  box-shadow:
+    0 8px 40px rgba(0,0,0,0.35);
+
+  overflow: hidden;
+}
+
+/* ================= HEADER ================= */
+
+.pm-header {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  margin-bottom: 14px;
+}
+
+.pm-title {
+  font-size: 14px;
+
+  font-weight: 700;
+
+  letter-spacing: 1px;
+
+  opacity: 0.9;
+}
+
+.pm-controls {
+  display: flex;
+
+  gap: 10px;
+}
+
+/* ================= BUTTONS ================= */
+
+.pm-main-btn,
+.pm-icon-btn,
+.pm-speed button,
+.pm-time-group button {
+  border: none;
+
+  border-radius: 999px;
+
+  background: #2b2b2b;
+
+  color: white;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.pm-main-btn:hover,
+.pm-icon-btn:hover,
+.pm-speed button:hover,
+.pm-time-group button:hover {
+  background: #3a3a3a;
+
+  transform: translateY(-1px);
+}
+
+.pm-main-btn {
+  padding: 10px 18px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.5px;
+}
+
+.pm-main-btn.active {
+  background: #00c853;
+
+  color: black;
+
+  box-shadow:
+    0 0 18px rgba(0,255,120,0.55);
+}
+
+.pm-icon-btn {
+  width: 36px;
+  height: 36px;
+
+  font-size: 18px;
+}
+
+.pm-speed button,
+.pm-time-group button {
+  width: 30px;
+  height: 30px;
+}
+
+/* ================= TIMELINE ================= */
+
+.pm-timeline-wrapper {
+  position: relative;
+
+  height: 90px;
+
+  overflow: hidden;
+
+  background:
+    linear-gradient(
+      to bottom,
+      #141414,
+      #1d1d1d
+    );
+
+  border-radius: 14px;
+
+  border:
+    1px solid rgba(255,255,255,0.06);
+
+  margin-bottom: 18px;
+
+  cursor: crosshair;
+}
+
+/* played side */
+
+.pm-played-overlay {
+  position: absolute;
+
+  top: 0;
+  left: 0;
+
+  width: 50%;
+  height: 100%;
+
+  background:
+    linear-gradient(
+      to left,
+      rgba(255,0,0,0.18),
+      rgba(255,0,0,0.04)
+    );
+
+  pointer-events: none;
+
+}
+
+#pm-timeline-inner {
+  position: absolute;
+
+  left: 0;
+  top: 0;
+
+  height: 100%;
+
+  will-change: transform;
+}
+
+/* loop region */
+
+#pm-loop-region {
+  position: absolute;
+
+  top: 14px;
+
+  height: 62px;
+
+  border-radius: 10px;
+
+  background:
+    rgba(0,255,120,0.16);
+
+  border:
+    2px solid rgba(0,255,120,0.95);
+
+  box-shadow:
+    0 0 16px rgba(0,255,120,0.2);
+}
+
+/* playhead */
+
+.pm-center-line {
+  position: absolute;
+
+  top: 0;
+  left: 50%;
+
+  width: 2px;
+  height: 100%;
+
+  transform: translateX(-50%);
+
+  background:
+    linear-gradient(
+      to bottom,
+      transparent,
+      #ff4d4d,
+      transparent
+    );
+
+  z-index: 10;
+}
+
+.pm-center-line::after {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: 50%;
+
+  transform: translateX(-50%);
+
+  width: 12px;
+  height: 12px;
+
+  border-radius: 50%;
+
+  background: #ff4d4d;
+
+  box-shadow:
+    0 0 12px rgba(255,77,77,0.8);
+}
+
+/* ================= TICKS ================= */
+
+#pm-ticks {
+  position: absolute;
+
+  width: 100%;
+  height: 100%;
+}
+
+.pm-tick {
+  position: absolute;
+
+  top: 0;
+
+  height: 100%;
+}
+
+.pm-tick-line {
+  width: 1px;
+
+  height: 50px;
+
+  margin-top: 20px;
+
+  background:
+    rgba(255,255,255,0.12);
+}
+
+.pm-tick-label {
+  position: absolute;
+
+  top: 2px;
+  left: 6px;
+
+  font-size: 10px;
+
+  opacity: 0.6;
+
+  white-space: nowrap;
+}
+
+/* ================= BOTTOM ================= */
+
+.pm-bottom {
+  display: flex;
+
+  justify-content: space-between;
+
+  gap: 14px;
+
+  flex-wrap: wrap;
+}
+
+.pm-time-group,
+.pm-speed {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+}
+
+.pm-time-group span {
+  font-size: 11px;
+
+  opacity: 0.65;
+
+  letter-spacing: 0.5px;
+}
+
+.pm-time-group input {
+  width: 110px;
+
+  background: #222;
+
+  border:
+    1px solid rgba(255,255,255,0.08);
+
+  border-radius: 10px;
+
+  color: white;
+
+  padding: 8px 10px;
+
+  outline: none;
+
+  transition:
+    border 0.15s ease,
+    background 0.15s ease;
+}
+
+.pm-time-group input:focus {
+  border-color:
+    rgba(0,255,120,0.7);
+
+  background: #2a2a2a;
+}
+
+.pm-speed {
+  margin-left: auto;
+}
+
+#pm-speed {
+  min-width: 60px;
+
+  text-align: center;
+
+  font-weight: 600;
+}
+
+/* ================= CURRENT TIME ================= */
+
+.pm-current-time {
+  margin-top: 12px;
+
+  text-align: center;
+
+  font-size: 12px;
+
+  opacity: 0.7;
+
+  letter-spacing: 1px;
+}
