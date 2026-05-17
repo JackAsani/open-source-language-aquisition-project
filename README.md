@@ -1,26 +1,23 @@
-# 🦜 Parrot Mirror
+# 🪞🦜 Parrot Mirror
 
-YouTube looping + speed control extension.
+**Turn YouTube into a pronunciation & fluency training tool through repetition and imitation.**
 
-## Features
-- A→B loop playback (default +3s window)
-- Editable start/end timestamps (MM:SS.mmm)
-- Speed control (0.25x–3x in 0.05 steps)
-- YouTube-native UI under video
-- Keyboard shortcuts
+Parrot Mirror is designed around a simple idea:
 
-## Keyboard Shortcuts
+> Natural-sounding pronunciation, intonation, and fluency are built through **repeated imitation of native speech in context**.
 
-- Alt + L → Toggle loop
-- Alt + S → Set start time to current playback
-- Alt + E → Set end time to current playback
-- Alt + , → Slow down speed
-- Alt + . → Speed up
+Instead of passively watching videos, you actively **train with them**.
 
-## Behavior Rules
+---
 
-- Loop defaults to currentTime → currentTime + 3s
-- Editing start/end overrides auto loop values
-- Changing speed resets per video (no persistence)
-- Seeking disables loop automatically
-- No support for YouTube Shorts
+## 🎯 Learning Philosophy
+
+Language fluency is not built by memorizing rules alone — it is built by:
+
+* 👂 **Listening to native speech patterns**
+* 🎭 **Imitating their pronunciation, intonation, and cadence**
+* ⚡ **Reducing hesitation through developing muscle memory**
+
+Parrot Mirror helps you convert any YouTube video into a **focused repetition training loop**, so you can:
+
+> Hear → Pause → Repeat → Compare → Improve
