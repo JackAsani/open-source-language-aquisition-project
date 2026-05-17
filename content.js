@@ -1,3 +1,5 @@
+// content.js
+
 console.log("hi");
 
 let startTime = null;
@@ -14,17 +16,22 @@ let video = null;
 
 let pixelsPerSecond = 120;
 
-const MIN_ZOOM = 40;
-const MAX_ZOOM = 600;
+const MAX_TIMELINE_WIDTH = 30000;
 
 let timelineInner = null;
 let loopRegion = null;
 let playheadTime = null;
 
+let wrapperWidth = 0;
+
 // drag state
 let isDraggingLoop = false;
 let dragStartTime = null;
 let isScrubbing = false;
+
+let lastDuration = null;
+
+let lastTimeLabelUpdate = 0;
 
 // ================= VIDEO =================
 
@@ -82,7 +89,9 @@ function loopCheck() {
 function setSpeed(val) {
   speed = Math.max(0.25, Math.min(3, val));
 
-  if (video) video.playbackRate = speed;
+  if (video) {
+    video.playbackRate = speed;
+  }
 
   updateUI();
 }
@@ -106,14 +115,22 @@ function parseTime(str) {
 function shiftStart(delta) {
   if (startTime === null) return;
 
-  startTime = Math.max(0, Math.min(endTime - 0.1, startTime + delta));
+  startTime = Math.max(
+    0,
+    Math.min(endTime - 0.1, startTime + delta)
+  );
+
   updateUI();
 }
 
 function shiftEnd(delta) {
   if (endTime === null) return;
 
-  endTime = Math.max(startTime + 0.1, endTime + delta);
+  endTime = Math.max(
+    startTime + 0.1,
+    endTime + delta
+  );
+
   updateUI();
 }
 
@@ -125,61 +142,139 @@ function createUI() {
   container.id = "parrot-mirror-ui";
 
   container.innerHTML = `
-  <div class="pm-header">
-    <div class="pm-title">PARROT MIRROR</div>
+    <div class="pm-topbar">
 
-    <div class="pm-controls">
-      <button id="pm-loop" class="pm-main-btn">LOOP</button>
-      <button id="pm-zoom-out" class="pm-icon-btn">−</button>
-      <button id="pm-zoom-in" class="pm-icon-btn">+</button>
+      <button id="pm-loop" class="pm-loop-btn">
+        ↻
+      </button>
+
+      <div class="pm-time-block">
+
+        <div class="pm-label">
+          START
+        </div>
+
+        <div class="pm-time-controls">
+
+          <button id="pm-s-start" class="pm-small-btn">
+            −
+          </button>
+
+          <input id="pm-start" />
+
+          <button id="pm-s-start-plus" class="pm-small-btn">
+            +
+          </button>
+
+        </div>
+
+      </div>
+
+      <div class="pm-time-block">
+
+        <div class="pm-label">
+          END
+        </div>
+
+        <div class="pm-time-controls">
+
+          <button id="pm-s-end" class="pm-small-btn">
+            −
+          </button>
+
+          <input id="pm-end" />
+
+          <button id="pm-s-end-plus" class="pm-small-btn">
+            +
+          </button>
+
+        </div>
+
+      </div>
+
+      <div class="pm-speed-group">
+
+        <button id="pm-slow" class="pm-small-btn">
+          −
+        </button>
+
+        <span id="pm-speed" class="pm-speed-label">
+          1.00x
+        </span>
+
+        <button id="pm-fast" class="pm-small-btn">
+          +
+        </button>
+
+      </div>
+
     </div>
-  </div>
 
-  <div class="pm-timeline-wrapper">
+    <div class="pm-timeline-wrapper">
 
-    <div class="pm-played-overlay"></div>
+      <div class="pm-played-overlay"></div>
 
-    <div class="pm-center-line"></div>
+      <div class="pm-center-line"></div>
 
-    <div id="pm-timeline-inner">
+      <div id="pm-timeline-inner">
 
-      <div id="pm-loop-region"></div>
+        <div id="pm-loop-region"></div>
 
-      <div id="pm-ticks"></div>
+        <div id="pm-ticks"></div>
+
+      </div>
 
     </div>
-  </div>
 
-  <div class="pm-bottom">
+    <div class="pm-bottom">
 
-    <div class="pm-time-group">
-      <span>START</span>
-      <input id="pm-start" />
-      <button id="pm-s-start">−</button>
-      <button id="pm-s-start-plus">+</button>
+      
+
     </div>
 
-    <div class="pm-time-group">
-      <span>END</span>
-      <input id="pm-end" />
-      <button id="pm-s-end">−</button>
-      <button id="pm-s-end-plus">+</button>
+    <div class="pm-current-time" id="pm-current-time">
+      00:00
     </div>
-
-    <div class="pm-speed">
-      <button id="pm-slow">−</button>
-      <span id="pm-speed">1.00x</span>
-      <button id="pm-fast">+</button>
-    </div>
-
-  </div>
-
-  <div class="pm-current-time" id="pm-current-time">
-    00:00
-  </div>
   `;
 
   return container;
+}
+
+// ================= TICKS =================
+
+function renderTicks(duration) {
+  const ticks = document.getElementById("pm-ticks");
+
+  if (!ticks) return;
+
+  if (lastDuration === duration) {
+    return;
+  }
+
+  lastDuration = duration;
+
+  ticks.innerHTML = "";
+
+  const interval = 10;
+
+  for (let t = 0; t < duration; t += interval) {
+    const tick = document.createElement("div");
+
+    tick.className = "pm-tick";
+
+    tick.style.left =
+      `${t * pixelsPerSecond}px`;
+
+    tick.innerHTML = `
+      <div class="pm-tick-line"></div>
+
+      <div class="pm-tick-label">
+        ${formatTime(t)}
+      </div>
+    `;
+
+    ticks.appendChild(tick);
+  }
 }
 
 // ================= TIMELINE =================
@@ -190,88 +285,93 @@ function renderTimeline() {
   const current = getCurrentTime();
   const duration = getDuration();
 
-  const width = duration * pixelsPerSecond;
+  const width =
+    Math.min(
+      duration * pixelsPerSecond,
+      MAX_TIMELINE_WIDTH
+    );
+
   timelineInner.style.width = `${width}px`;
 
-  const wrapper =
-    document.querySelector(".pm-timeline-wrapper");
-
-  const wrapperWidth = wrapper?.offsetWidth || 0;
-
   const offset =
-    wrapperWidth / 2 - current * pixelsPerSecond;
+    wrapperWidth / 2 -
+    current * pixelsPerSecond;
 
   timelineInner.style.transform =
     `translateX(${offset}px)`;
 
   // loop region
-  if (loopRegion && startTime !== null && endTime !== null) {
+
+  if (
+    loopRegion &&
+    startTime !== null &&
+    endTime !== null
+  ) {
     loopRegion.style.display = "block";
-    loopRegion.style.left = `${startTime * pixelsPerSecond}px`;
-    loopRegion.style.width = `${(endTime - startTime) * pixelsPerSecond}px`;
+
+    loopRegion.style.left =
+      `${startTime * pixelsPerSecond}px`;
+
+    loopRegion.style.width =
+      `${(endTime - startTime) * pixelsPerSecond}px`;
+
   } else if (loopRegion) {
     loopRegion.style.display = "none";
   }
 
-  // played overlay (LEFT side)
-  const played = document.querySelector(".pm-played-overlay");
+  // played overlay
+
+  const played =
+    document.querySelector(".pm-played-overlay");
+
   if (played) {
-    played.style.width = `${current * pixelsPerSecond}px`;
+    played.style.width =
+      `${current * pixelsPerSecond}px`;
   }
 
-  if (playheadTime) {
-    playheadTime.textContent = formatTime(current);
-  }
+  // time text
 
-  renderTicks(duration);
+  const now = performance.now();
+
+  if (
+    playheadTime &&
+    now - lastTimeLabelUpdate > 100
+  ) {
+    playheadTime.textContent =
+      formatTime(current);
+
+    lastTimeLabelUpdate = now;
+  }
 }
 
-// ================= TICKS =================
+// ================= SIZE =================
 
-let lastZoom = null;
-let lastDuration = null;
+function updateWrapperWidth() {
+  const wrapper =
+    document.querySelector(".pm-timeline-wrapper");
 
-function renderTicks(duration) {
-  const ticks = document.getElementById("pm-ticks");
-  if (!ticks) return;
-
-  if (lastZoom === pixelsPerSecond && lastDuration === duration) return;
-
-  lastZoom = pixelsPerSecond;
-  lastDuration = duration;
-
-  ticks.innerHTML = "";
-
-  const interval = 1;
-
-  for (let t = 0; t < duration; t += interval) {
-    const tick = document.createElement("div");
-
-    tick.className = "pm-tick";
-    tick.style.left = `${t * pixelsPerSecond}px`;
-
-    tick.innerHTML = `
-      <div class="pm-tick-line"></div>
-      <div class="pm-tick-label">${formatTime(t)}</div>
-    `;
-
-    ticks.appendChild(tick);
+  if (wrapper) {
+    wrapperWidth = wrapper.offsetWidth;
   }
 }
 
 // ================= TIME CONVERT =================
 
 function screenXToTime(clientX) {
-  const wrapper = document.querySelector(".pm-timeline-wrapper");
+  const wrapper =
+    document.querySelector(".pm-timeline-wrapper");
+
   const rect = wrapper.getBoundingClientRect();
 
   const current = getCurrentTime();
 
   const centerX = rect.width / 2;
 
-  const deltaPx = clientX - rect.left - centerX;
+  const deltaPx =
+    clientX - rect.left - centerX;
 
-  const deltaTime = deltaPx / pixelsPerSecond;
+  const deltaTime =
+    deltaPx / pixelsPerSecond;
 
   return Math.max(0, current + deltaTime);
 }
@@ -279,10 +379,17 @@ function screenXToTime(clientX) {
 // ================= UPDATE =================
 
 function updateUI() {
-  const startEl = document.getElementById("pm-start");
-  const endEl = document.getElementById("pm-end");
-  const speedEl = document.getElementById("pm-speed");
-  const loopBtn = document.getElementById("pm-loop");
+  const startEl =
+    document.getElementById("pm-start");
+
+  const endEl =
+    document.getElementById("pm-end");
+
+  const speedEl =
+    document.getElementById("pm-speed");
+
+  const loopBtn =
+    document.getElementById("pm-loop");
 
   if (startEl && startTime !== null) {
     startEl.value = formatTime(startTime);
@@ -292,10 +399,16 @@ function updateUI() {
     endEl.value = formatTime(endTime);
   }
 
-  if (speedEl) speedEl.textContent = speed.toFixed(2) + "x";
+  if (speedEl) {
+    speedEl.textContent =
+      speed.toFixed(2) + "x";
+  }
 
   if (loopBtn) {
-    loopBtn.classList.toggle("active", isLooping);
+    loopBtn.classList.toggle(
+      "active",
+      isLooping
+    );
   }
 
   renderTimeline();
@@ -304,39 +417,67 @@ function updateUI() {
 // ================= EVENTS =================
 
 function bindUIEvents(container) {
-  const loopBtn = container.querySelector("#pm-loop");
+  const loopBtn =
+    container.querySelector("#pm-loop");
 
-  const wrapper = container.querySelector(".pm-timeline-wrapper");
+  const wrapper =
+    container.querySelector(".pm-timeline-wrapper");
+
+  const slowBtn =
+    container.querySelector("#pm-slow");
+
+  const fastBtn =
+    container.querySelector("#pm-fast");
 
   loopBtn.onclick = toggleLoop;
 
-  // ================= DRAG SELECT =================
+  slowBtn.onclick = () => {
+    setSpeed(speed - 0.05);
+  };
+
+  fastBtn.onclick = () => {
+    setSpeed(speed + 0.05);
+  };
+
+  // ================= SHIFT =================
+
+  container.querySelector("#pm-s-start")
+    .onclick = () => shiftStart(-0.25);
+
+  container.querySelector("#pm-s-start-plus")
+    .onclick = () => shiftStart(0.25);
+
+  container.querySelector("#pm-s-end")
+    .onclick = () => shiftEnd(-0.25);
+
+  container.querySelector("#pm-s-end-plus")
+    .onclick = () => shiftEnd(0.25);
+
+  // ================= DRAG =================
 
   wrapper.addEventListener("mousedown", (e) => {
     if (!video) return;
-  
+
     e.preventDefault();
-  
-    // 🚨 HARD FREEZE EVERYTHING OUTSIDE UI
+
     document.body.style.pointerEvents = "none";
     wrapper.style.pointerEvents = "auto";
-  
+
     isScrubbing = true;
     isDraggingLoop = true;
-  
+
     const t = screenXToTime(e.clientX);
-  
+
     dragStartTime = t;
-  
+
     startTime = t;
     endTime = t;
-  
+
     isLooping = true;
-  
-    // 🧊 HARD PAUSE (prevents YouTube resume race)
+
     video.pause();
     video.currentTime = video.currentTime;
-  
+
     updateUI();
   }, true);
 
@@ -345,43 +486,46 @@ function bindUIEvents(container) {
 
     const t = screenXToTime(e.clientX);
 
-    startTime = Math.min(dragStartTime, t);
-    endTime = Math.max(dragStartTime, t);
+    startTime =
+      Math.min(dragStartTime, t);
+
+    endTime =
+      Math.max(dragStartTime, t);
 
     updateUI();
   });
 
-window.addEventListener("mouseup", () => {
-  if (!isDraggingLoop) return;
+  window.addEventListener("mouseup", () => {
+    if (!isDraggingLoop) return;
 
-  isDraggingLoop = false;
-  isScrubbing = false;
+    isDraggingLoop = false;
+    isScrubbing = false;
 
-  document.body.style.pointerEvents = "";
+    document.body.style.pointerEvents = "";
 
-  if (endTime - startTime < 0.1) {
-    endTime = startTime + 0.1;
-  }
+    if (endTime - startTime < 0.1) {
+      endTime = startTime + 0.1;
+    }
 
-  video.currentTime = startTime;
-  video.play();
-
-  isLooping = true;
-
-  updateUI();
-});
-}
-
-// ================= LOOP ENGINE =================
-
-function loopCheck() {
-  if (!video || !isLooping) return;
-  if (startTime === null || endTime === null) return;
-
-  if (video.currentTime >= endTime) {
     video.currentTime = startTime;
     video.play();
+
+    isLooping = true;
+
+    updateUI();
+  });
+}
+
+// ================= ANIMATION LOOP =================
+
+function animationLoop() {
+  loopCheck();
+
+  if (!isScrubbing) {
+    renderTimeline();
   }
+
+  requestAnimationFrame(animationLoop);
 }
 
 // ================= INIT =================
@@ -389,9 +533,15 @@ function loopCheck() {
 function init() {
   const observer = new MutationObserver(() => {
     const newVideo = getVideo();
+
     if (newVideo && newVideo !== video) {
       video = newVideo;
+
       video.playbackRate = speed;
+
+      renderTicks(getDuration());
+
+      updateWrapperWidth();
     }
   });
 
@@ -400,30 +550,46 @@ function init() {
     subtree: true
   });
 
-  setInterval(loopCheck, 50);
+  window.addEventListener(
+    "resize",
+    updateWrapperWidth
+  );
 
-  requestAnimationFrame(function loop() {
-    if (!isScrubbing) renderTimeline();
-    requestAnimationFrame(loop);
-  });
+  animationLoop();
 }
 
 // ================= INJECT =================
 
 function injectUI() {
-  const target = document.querySelector("#below");
+  const target =
+    document.querySelector("#below");
 
-  if (!target || document.getElementById("parrot-mirror-ui")) return;
+  if (
+    !target ||
+    document.getElementById("parrot-mirror-ui")
+  ) {
+    return;
+  }
 
   const ui = createUI();
+
   target.prepend(ui);
 
-  timelineInner = document.getElementById("pm-timeline-inner");
-  loopRegion = document.getElementById("pm-loop-region");
-  playheadTime = document.getElementById("pm-current-time");
+  timelineInner =
+    document.getElementById("pm-timeline-inner");
+
+  loopRegion =
+    document.getElementById("pm-loop-region");
+
+  playheadTime =
+    document.getElementById("pm-current-time");
 
   bindUIEvents(ui);
+
+  updateWrapperWidth();
+
   renderTicks(getDuration());
+
   updateUI();
 }
 
