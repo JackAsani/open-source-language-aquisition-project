@@ -162,11 +162,12 @@
   left: 0;
 
   height: 100%;
+  width: 50%;
 
   background: linear-gradient(
     to right,
+    rgba(255,0,0,0.05),
     rgba(255,0,0,0.22),
-    rgba(255,0,0,0.05)
   );
 
   pointer-events: none;
@@ -174,20 +175,18 @@
   z-index: 1;
 }
 
-.pm-center-line {
+.pm-needle {
   position: absolute;
-
   left: 50%;
   top: 0;
-
-  width: 2px;
+  width: 3px;
   height: 100%;
-
-  background: white;
-
+  background: #ff5555;
   transform: translateX(-50%);
-
-  z-index: 5;
+  z-index: 6;
+  pointer-events: none;
+  box-shadow: 0 0 8px rgba(255, 85, 85, 0.5);
+  border-radius: 2px;
 }
 
 #pm-loop-region {

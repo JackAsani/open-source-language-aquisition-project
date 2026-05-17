@@ -1,5 +1,6 @@
 // content.js
-
+let needle = null;
+let wasPlayingBeforeDrag = false;
 console.log("hi");
 
 let startTime = null;
@@ -14,7 +15,7 @@ let video = null;
 
 // ================= TIMELINE =================
 
-let pixelsPerSecond = 120;
+let pixelsPerSecond = 30;
 
 const MAX_TIMELINE_WIDTH = 30000;
 
@@ -214,7 +215,7 @@ function createUI() {
 
       <div class="pm-played-overlay"></div>
 
-      <div class="pm-center-line"></div>
+      <div id="pm-needle" class="pm-needle"></div>
 
       <div id="pm-timeline-inner">
 
@@ -285,61 +286,69 @@ function renderTimeline() {
   const current = getCurrentTime();
   const duration = getDuration();
 
-  const width =
-    Math.min(
-      duration * pixelsPerSecond,
-      MAX_TIMELINE_WIDTH
-    );
-
+  const width = Math.min(duration * pixelsPerSecond, MAX_TIMELINE_WIDTH);
   timelineInner.style.width = `${width}px`;
 
-  const offset =
-    wrapperWidth / 2 -
-    current * pixelsPerSecond;
+  let offset;
+  let needlePosition = "50%"; // Default center
+  
+  if (isLooping && startTime !== null && endTime !== null && endTime > startTime) {
+    // LOOP MODE: Timeline fixed on loop region
+    const loopCenter = (startTime + endTime) / 2;
+    offset = wrapperWidth / 2 - loopCenter * pixelsPerSecond;
+    
+    // Calculate needle position within the loop (0% to 100%)
+    let clampedTime = Math.min(Math.max(current, startTime), endTime);
+    let percentInLoop = (clampedTime - startTime) / (endTime - startTime);
+    
+    // Position needle from 0% to 100% across the visible timeline
+    // But clamp it to stay within the loop region visually
+    const loopLeftPx = startTime * pixelsPerSecond + offset;
+    const loopWidthPx = (endTime - startTime) * pixelsPerSecond;
+    const needleLeftPx = loopLeftPx + (percentInLoop * loopWidthPx);
+    
+    // Convert to percentage relative to wrapper
+    needlePosition = (needleLeftPx / wrapperWidth) * 100 + "%";
+    
+  } else {
+    // NORMAL MODE: Timeline follows playhead
+    offset = wrapperWidth / 2 - current * pixelsPerSecond;
+    needlePosition = "50%"; // Center line stays in middle
+  }
 
-  timelineInner.style.transform =
-    `translateX(${offset}px)`;
+  timelineInner.style.transform = `translateX(${offset}px)`;
+  
+  // Update needle position
+  if (needle) {
+    needle.style.left = needlePosition;
+  }
 
-  // loop region
-
-  if (
-    loopRegion &&
-    startTime !== null &&
-    endTime !== null
-  ) {
+  // Loop region rendering
+  if (loopRegion && startTime !== null && endTime !== null) {
     loopRegion.style.display = "block";
-
-    loopRegion.style.left =
-      `${startTime * pixelsPerSecond}px`;
-
-    loopRegion.style.width =
-      `${(endTime - startTime) * pixelsPerSecond}px`;
-
+    loopRegion.style.left = `${startTime * pixelsPerSecond}px`;
+    loopRegion.style.width = `${(endTime - startTime) * pixelsPerSecond}px`;
   } else if (loopRegion) {
     loopRegion.style.display = "none";
   }
 
-  // played overlay
-
-  const played =
-    document.querySelector(".pm-played-overlay");
-
+  // Played overlay
+  const played = document.querySelector(".pm-played-overlay");
   if (played) {
-    played.style.width =
-      `${current * pixelsPerSecond}px`;
+    if (isLooping && startTime !== null && endTime !== null) {
+      // Show played portion within loop only
+      let clampedTime = Math.min(Math.max(current, startTime), endTime);
+      let playedPx = (clampedTime - startTime) * pixelsPerSecond;
+      played.style.width = `${startTime * pixelsPerSecond + playedPx}px`;
+    } else {
+      played.style.width = `${current * pixelsPerSecond}px`;
+    }
   }
 
-  // time text
-
+  // Time text update
   const now = performance.now();
-
-  if (
-    playheadTime &&
-    now - lastTimeLabelUpdate > 100
-  ) {
-    playheadTime.textContent =
-      formatTime(current);
-
+  if (playheadTime && now - lastTimeLabelUpdate > 100) {
+    playheadTime.textContent = formatTime(current);
     lastTimeLabelUpdate = now;
   }
 }
@@ -417,17 +426,10 @@ function updateUI() {
 // ================= EVENTS =================
 
 function bindUIEvents(container) {
-  const loopBtn =
-    container.querySelector("#pm-loop");
-
-  const wrapper =
-    container.querySelector(".pm-timeline-wrapper");
-
-  const slowBtn =
-    container.querySelector("#pm-slow");
-
-  const fastBtn =
-    container.querySelector("#pm-fast");
+  const loopBtn = container.querySelector("#pm-loop");
+  const wrapper = container.querySelector(".pm-timeline-wrapper");
+  const slowBtn = container.querySelector("#pm-slow");
+  const fastBtn = container.querySelector("#pm-fast");
 
   loopBtn.onclick = toggleLoop;
 
@@ -439,22 +441,43 @@ function bindUIEvents(container) {
     setSpeed(speed + 0.05);
   };
 
-  // ================= SHIFT =================
+  // SHIFT buttons
+  container.querySelector("#pm-s-start").onclick = () => shiftStart(-0.25);
+  container.querySelector("#pm-s-start-plus").onclick = () => shiftStart(0.25);
+  container.querySelector("#pm-s-end").onclick = () => shiftEnd(-0.25);
+  container.querySelector("#pm-s-end-plus").onclick = () => shiftEnd(0.25);
 
-  container.querySelector("#pm-s-start")
-    .onclick = () => shiftStart(-0.25);
+  // Keyboard shortcut: 'B' to break loop
+  window.addEventListener("keydown", (e) => {
+    // Check if key is 'b' or 'B'
+    if (e.key === 'b' || e.key === 'B') {
+      // Only break if loop is active
+      if (isLooping) {
+        e.preventDefault(); // Prevent browser's default 'b' action (if any)
+        
+        // Exit loop mode
+        isLooping = false;
+        startTime = null;
+        endTime = null;
+        
+        // Update UI to reflect loop is off
+        updateUI();
+        
+        // Optional: Add a small visual feedback
+        const loopBtn = document.getElementById("pm-loop");
+        if (loopBtn) {
+          loopBtn.style.transform = "scale(0.95)";
+          setTimeout(() => {
+            loopBtn.style.transform = "";
+          }, 100);
+        }
+        
+        console.log("Loop broken by 'B' key");
+      }
+    }
+  });
 
-  container.querySelector("#pm-s-start-plus")
-    .onclick = () => shiftStart(0.25);
-
-  container.querySelector("#pm-s-end")
-    .onclick = () => shiftEnd(-0.25);
-
-  container.querySelector("#pm-s-end-plus")
-    .onclick = () => shiftEnd(0.25);
-
-  // ================= DRAG =================
-
+  // DRAG - MOUSEDOWN
   wrapper.addEventListener("mousedown", (e) => {
     if (!video) return;
 
@@ -466,35 +489,33 @@ function bindUIEvents(container) {
     isScrubbing = true;
     isDraggingLoop = true;
 
+    // Store playback state before drag
+    wasPlayingBeforeDrag = !video.paused;
+
     const t = screenXToTime(e.clientX);
-
     dragStartTime = t;
-
     startTime = t;
     endTime = t;
-
     isLooping = true;
 
+    // Always pause during drag
     video.pause();
     video.currentTime = video.currentTime;
 
     updateUI();
   }, true);
 
+  // DRAG - MOUSEMOVE
   window.addEventListener("mousemove", (e) => {
     if (!isDraggingLoop) return;
 
     const t = screenXToTime(e.clientX);
-
-    startTime =
-      Math.min(dragStartTime, t);
-
-    endTime =
-      Math.max(dragStartTime, t);
-
+    startTime = Math.min(dragStartTime, t);
+    endTime = Math.max(dragStartTime, t);
     updateUI();
   });
 
+  // DRAG - MOUSEUP
   window.addEventListener("mouseup", () => {
     if (!isDraggingLoop) return;
 
@@ -508,10 +529,13 @@ function bindUIEvents(container) {
     }
 
     video.currentTime = startTime;
-    video.play();
+    
+    // Only resume if video was playing before drag
+    if (wasPlayingBeforeDrag) {
+      video.play();
+    }
 
     isLooping = true;
-
     updateUI();
   });
 }
@@ -561,35 +585,20 @@ function init() {
 // ================= INJECT =================
 
 function injectUI() {
-  const target =
-    document.querySelector("#below");
-
-  if (
-    !target ||
-    document.getElementById("parrot-mirror-ui")
-  ) {
-    return;
-  }
+  const target = document.querySelector("#below");
+  if (!target || document.getElementById("parrot-mirror-ui")) return;
 
   const ui = createUI();
-
   target.prepend(ui);
 
-  timelineInner =
-    document.getElementById("pm-timeline-inner");
-
-  loopRegion =
-    document.getElementById("pm-loop-region");
-
-  playheadTime =
-    document.getElementById("pm-current-time");
+  timelineInner = document.getElementById("pm-timeline-inner");
+  loopRegion = document.getElementById("pm-loop-region");
+  playheadTime = document.getElementById("pm-current-time");
+  needle = document.getElementById("pm-needle");
 
   bindUIEvents(ui);
-
   updateWrapperWidth();
-
   renderTicks(getDuration());
-
   updateUI();
 }
 
