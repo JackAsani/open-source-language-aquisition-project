@@ -2,6 +2,8 @@
 
 **Turn YouTube into a pronunciation & fluency training tool through repetition and imitation.**
 
+CHROME EXTENSION
+
 Parrot Mirror is designed around a simple idea:
 
 > Natural-sounding pronunciation, intonation, and fluency are built through **repeated imitation of native speech in context**.
