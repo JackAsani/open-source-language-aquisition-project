@@ -17,5 +17,7 @@ A chrome extension that helps repeadtedly practice native-pronunciation while wa
 + [Chinese Zero to Hero: Language Player](https://languageplayer.io/)
 
 
+---
 
+Feel free to add to / customize this toolset!
 
